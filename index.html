@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Racing Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #87CEEB, #98FB98);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        canvas {
+            border: 4px solid #8B4513;
+            border-radius: 10px;
+            background: #228B22;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .score, .speed, .lap {
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+        .controls {
+            margin-top: 15px;
+            color: white;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        button {
+            background: #FF6B35;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #FF8C42;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="ui">
+            <div class="score">Score: <span id="score">0</span></div>
+            <div class="speed">Speed: <span id="speed">0</span> mph</div>
+            <div class="lap">Lap: <span id="lap">1</span>/3</div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div class="controls">
+            Use ARROW KEYS or WASD to control Mario's kart!
+        </div>
+        <div class="game-over" id="gameOver">
+            <h2>🏁 Race Complete! 🏁</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <p>Total Time: <span id="totalTime">0</span>s</p>
+            <button onclick="restartGame()">Race Again!</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let gameRunning = true;
+        let score = 0;
+        let currentLap = 1;
+        let totalLaps = 3;
+        let startTime = Date.now();
+
+        // Mario kart object
+        const mario = {
+            x: 100,
+            y: 300,
+            width: 30,
+            height: 20,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 8,
+            acceleration: 0.3,
+            friction: 0.95,
+            turnSpeed: 0.08
+        };
+
+        // Track checkpoints for lap counting
+        const checkpoints = [
+            { x: 100, y: 300, passed: false },
+            { x: 600, y: 100, passed: false },
+            { x: 700, y: 500, passed: false },
+            { x: 200, y: 550, passed: false }
+        ];
+
+        // Obstacles
+        const obstacles = [
+            { x: 300, y: 200, width: 40, height: 40, type: 'barrel' },
+            { x: 500, y: 400, width: 35, height: 35, type: 'shell' },
+            { x: 150, y: 450, width: 30, height: 30, type: 'banana' },
+            { x: 650, y: 250, width: 40, height: 40, type: 'barrel' },
+            { x: 400, y: 500, width: 35, height: 35, type: 'shell' }
+        ];
+
+        // Power-ups
+        const powerUps = [
+            { x: 250, y: 350, width: 25, height: 25, type: 'mushroom', collected: false },
+            { x: 550, y: 150, width: 25, height: 25, type: 'star', collected: false },
+            { x: 450, y: 300, width: 25, height: 25, type: 'mushroom', collected: false }
+        ];
+
+        // Input handling
+        const keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Draw functions
+        function drawMario() {
+            ctx.save();
+            ctx.translate(mario.x + mario.width/2, mario.y + mario.height/2);
+            ctx.rotate(mario.angle);
+            
+            // Mario's kart body
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(-mario.width/2, -mario.height/2, mario.width, mario.height);
+            
+            // Mario's cap
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(-5, -mario.height/2 - 5, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Mario's face
+            ctx.fillStyle = '#FFDBAC';
+            ctx.beginPath();
+            ctx.arc(-5, -mario.height/2, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Wheels
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(-mario.width/2 + 5, -mario.height/2 + 3, 4, 0, Math.PI * 2);
+            ctx.arc(mario.width/2 - 5, -mario.height/2 + 3, 4, 0, Math.PI * 2);
+            ctx.arc(-mario.width/2 + 5, mario.height/2 - 3, 4, 0, Math.PI * 2);
+            ctx.arc(mario.width/2 - 5, mario.height/2 - 3, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+
+        function drawTrack() {
+            // Track outline
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.roundRect(50, 50, 700, 500, 30);
+            ctx.stroke();
+            
+            // Inner track
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.roundRect(100, 100, 600, 400, 25);
+            ctx.stroke();
+            
+            // Track surface
+            ctx.fillStyle = '#696969';
+            ctx.beginPath();
+            ctx.roundRect(75, 75, 650, 450, 27);
+            ctx.fill();
+            
+            // Start/finish line
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 10; i++) {
+                ctx.fillRect(80 + i * 20, 290 + (i % 2) * 10, 15, 20);
+            }
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                ctx.save();
+                ctx.translate(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
+                
+                if (obstacle.type === 'barrel') {
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(-obstacle.width/2, -obstacle.height/2, obstacle.width, obstacle.height);
+                    ctx.fillStyle = '#654321';
+                    ctx.fillRect(-obstacle.width/2 + 5, -obstacle.height/2 + 5, obstacle.width - 10, 5);
+                    ctx.fillRect(-obstacle.width/2 + 5, obstacle.height/2 - 10, obstacle.width - 10, 5);
+                } else if (obstacle.type === 'shell') {
+                    ctx.fillStyle = '#00FF00';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, obstacle.width/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#008000';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, obstacle.width/3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obstacle.type === 'banana') {
+                    ctx.fillStyle = '#FFFF00';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, obstacle.width/2, obstacle.height/3, Math.PI/4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            });
+        }
+
+        function drawPowerUps() {
+            powerUps.forEach(powerUp => {
+                if (!powerUp.collected) {
+                    ctx.save();
+                    ctx.translate(powerUp.x + powerUp.width/2, powerUp.y + powerUp.height/2);
+                    
+                    if (powerUp.type === 'mushroom') {
+                        ctx.fillStyle = '#FF0000';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, powerUp.width/2, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.beginPath();
+                        ctx.arc(-5, -3, 3, 0, Math.PI * 2);
+                        ctx.arc(5, -3, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (powerUp.type === 'star') {
+                        ctx.fillStyle = '#FFD700';
+                        ctx.beginPath();
+                        for (let i = 0; i < 5; i++) {
+                            const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
+                            const x = Math.cos(angle) * powerUp.width/2;
+                            const y = Math.sin(angle) * powerUp.height/2;
+                            if (i === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    
+                    ctx.restore();
+                }
+            });
+        }
+
+        function drawCheckpoints() {
+            checkpoints.forEach((checkpoint, index) => {
+                ctx.fillStyle = checkpoint.passed ? '#00FF00' : '#FF0000';
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                ctx.arc(checkpoint.x, checkpoint.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText((index + 1).toString(), checkpoint.x, checkpoint.y + 4);
+            });
+        }
+
+        // Game logic
+        function updateMario() {
+            // Handle input
+            if (keys['arrowup'] || keys['w']) {
+                mario.speed = Math.min(mario.speed + mario.acceleration, mario.maxSpeed);
+            }
+            if (keys['arrowdown'] || keys['s']) {
+                mario.speed = Math.max(mario.speed - mario.acceleration, -mario.maxSpeed/2);
+            }
+            if (keys['arrowleft'] || keys['a']) {
+                mario.angle -= mario.turnSpeed * (mario.speed / mario.maxSpeed);
+            }
+            if (keys['arrowright'] || keys['d']) {
+                mario.angle += mario.turnSpeed * (mario.speed / mario.maxSpeed);
+            }
+
+            // Apply friction
+            mario.speed *= mario.friction;
+
+            // Update position
+            mario.x += Math.cos(mario.angle) * mario.speed;
+            mario.y += Math.sin(mario.angle) * mario.speed;
+
+            // Keep Mario on track (simple boundary)
+            mario.x = Math.max(60, Math.min(mario.x, canvas.width - 60 - mario.width));
+            mario.y = Math.max(60, Math.min(mario.y, canvas.height - 60 - mario.height));
+
+            // Update speed display
+            document.getElementById('speed').textContent = Math.round(Math.abs(mario.speed) * 10);
+        }
+
+        function checkCollisions() {
+            // Check obstacle collisions
+            obstacles.forEach(obstacle => {
+                if (mario.x < obstacle.x + obstacle.width &&
+                    mario.x + mario.width > obstacle.x &&
+                    mario.y < obstacle.y + obstacle.height &&
+                    mario.y + mario.height > obstacle.y) {
+                    mario.speed *= 0.3; // Slow down on collision
+                    score = Math.max(0, score - 10);
+                }
+            });
+
+            // Check power-up collisions
+            powerUps.forEach(powerUp => {
+                if (!powerUp.collected &&
+                    mario.x < powerUp.x + powerUp.width &&
+                    mario.x + mario.width > powerUp.x &&
+                    mario.y < powerUp.y + powerUp.height &&
+                    mario.y + mario.height > powerUp.y) {
+                    powerUp.collected = true;
+                    if (powerUp.type === 'mushroom') {
+                        mario.maxSpeed += 1;
+                        score += 50;
+                    } else if (powerUp.type === 'star') {
+                        score += 100;
+                    }
+                }
+            });
+        }
+
+        function checkCheckpoints() {
+            checkpoints.forEach((checkpoint, index) => {
+                const distance = Math.sqrt(
+                    Math.pow(mario.x + mario.width/2 - checkpoint.x, 2) +
+                    Math.pow(mario.y + mario.height/2 - checkpoint.y, 2)
+                );
+                
+                if (distance < 30 && !checkpoint.passed) {
+                    checkpoint.passed = true;
+                    score += 25;
+                    
+                    // Check if all checkpoints passed
+                    if (checkpoints.every(cp => cp.passed)) {
+                        currentLap++;
+                        checkpoints.forEach(cp => cp.passed = false);
+                        score += 200;
+                        
+                        if (currentLap > totalLaps) {
+                            endGame();
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateScore() {
+            score += Math.round(mario.speed * 0.1);
+            document.getElementById('score').textContent = score;
+            document.getElementById('lap').textContent = currentLap;
+        }
+
+        function endGame() {
+            gameRunning = false;
+            const totalTime = Math.round((Date.now() - startTime) / 1000);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('totalTime').textContent = totalTime;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function restartGame() {
+            gameRunning = true;
+            score = 0;
+            currentLap = 1;
+            startTime = Date.now();
+            mario.x = 100;
+            mario.y = 300;
+            mario.angle = 0;
+            mario.speed = 0;
+            mario.maxSpeed = 8;
+            checkpoints.forEach(cp => cp.passed = false);
+            powerUps.forEach(pu => pu.collected = false);
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (gameRunning) {
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw everything
+                drawTrack();
+                drawCheckpoints();
+                drawObstacles();
+                drawPowerUps();
+                drawMario();
+                
+                // Update game state
+                updateMario();
+                checkCollisions();
+                checkCheckpoints();
+                updateScore();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
