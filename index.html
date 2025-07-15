@@ -1,6 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Super Mario Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-gray-800 font-sans">
+
+  <!-- Header -->
+  <header class="bg-yellow-400 p-4 shadow-md flex justify-between items-center">
+    <h1 class="text-2xl font-bold text-red-600">Super Mario</h1>
+    <button class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Play Now</button>
+  </header>
+
+  <!-- Hero -->
+  <section class="text-center py-16 bg-gradient-to-br from-yellow-100 to-white">
+    <img src="https://upload.wikimedia.org/wikipedia/en/a/a9/MarioNSMBUDeluxe.png" alt="Mario" class="mx-auto w-48 mb-4"/>
+    <h2 class="text-4xl font-bold text-red-500 mb-4">Jump into the Adventure!</h2>
+    <p class="max-w-xl mx-auto mb-6 text-gray-700">Play the classic Mario game right in your browser. Collect coins, dodge Goombas, and save the princess!</p>
+    <button class="bg-red-500 text-white px-6 py-3 rounded-full text-lg hover:bg-red-600">Start Playing</button>
+  </section>
+
+  <!-- Game Info -->
+  <section class="py-12 px-6 max-w-4xl mx-auto">
+    <h3 class="text-2xl font-bold mb-4">About the Game</h3>
+    <p class="text-gray-600 mb-6">This is a fan-made version of the original Super Mario. You can play it directly in your browser with smooth controls and retro graphics.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <img src="https://upload.wikimedia.org/wikipedia/en/0/03/Super_Mario_Bros._box.png" alt="Screenshot" class="rounded shadow-md">
+      <div>
+        <h4 class="text-lg font-semibold mb-2">Controls</h4>
+        <ul class="list-disc list-inside text-gray-700">
+          <li><strong>Arrow keys</strong> to move</li>
+          <li><strong>Spacebar</strong> to jump</li>
+          <li><strong>Z</strong> to run/fire</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-yellow-400 p-4 text-center text-sm text-gray-800">
+    © 2025 Fan Mario Game. Not affiliated with Nintendo. | Built by Sakil Gurung
+  </footer>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mario Racing Game</title>
